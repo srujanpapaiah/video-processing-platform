@@ -1,4 +1,5 @@
 import ffmpeg from "fluent-ffmpeg";
+import DOMPurify from 'dompurify';
 import ffmpegStatic from "ffmpeg-static";
 import fs from "fs";
 import path from "path";
