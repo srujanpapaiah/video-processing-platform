@@ -36,6 +36,11 @@ const allowedVideoMimes = [
 
 const allowedSubtitleExts = [".srt", ".ass", ".ssa", ".vtt"];
 
+const allowedVideoExts = [
+  ".mp4", ".mpeg", ".mpg", ".mov", ".avi", ".mkv", ".webm",
+  ".flv", ".ogg", ".ogv", ".3gp", ".3g2", ".wmv", ".m4v",
+];
+
 const fileFilter = (
   _req: Express.Request,
   file: Express.Multer.File,
@@ -43,8 +48,13 @@ const fileFilter = (
 ) => {
   const ext = path.extname(file.originalname).toLowerCase();
 
-  // Allow video files
+  // Allow video files by MIME type
   if (allowedVideoMimes.includes(file.mimetype)) {
+    return cb(null, true);
+  }
+
+  // Allow video files by extension (for tools that send application/octet-stream)
+  if (allowedVideoExts.includes(ext)) {
     return cb(null, true);
   }
 
@@ -58,7 +68,12 @@ const fileFilter = (
     return cb(null, true);
   }
 
-  cb(new Error(`Invalid file type: ${file.mimetype}. Allowed: video, image, and subtitle files.`));
+  // Allow application/octet-stream if extension looks like video
+  if (file.mimetype === "application/octet-stream" && (allowedVideoExts.includes(ext) || allowedSubtitleExts.includes(ext))) {
+    return cb(null, true);
+  }
+
+  cb(new Error(`Invalid file type: ${file.mimetype} (${ext}). Allowed: video, image, and subtitle files.`));
 };
 
 export const uploadVideo = multer({
