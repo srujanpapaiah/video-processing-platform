@@ -58,11 +58,21 @@ export async function uploadMultipleFiles(req: Request, res: Response, next: Nex
 
 export async function createJob(req: Request, res: Response, next: NextFunction) {
   try {
-    const { operation, options = {} } = req.body;
+    const { operation } = req.body;
+    let options = req.body.options || {};
     const file = req.file;
 
     if (!file) {
       throw new BadRequestError("No video file uploaded");
+    }
+
+    // Parse options if it's a JSON string (from FormData)
+    if (typeof options === "string") {
+      try {
+        options = JSON.parse(options);
+      } catch {
+        options = {};
+      }
     }
 
     const jobData: JobData = {

@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import path from "path";
+import fs from "fs";
 import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { ExpressAdapter } from "@bull-board/express";
@@ -49,13 +51,23 @@ app.use("/admin/queues", serverAdapter.getRouter());
 // ─── API Routes ──────────────────────────────────────────────────────────────
 app.use("/api/v1", apiRouter);
 
-// ─── 404 Handler ─────────────────────────────────────────────────────────────
-app.use((_req, res) => {
-  res.status(404).json({
-    success: false,
-    error: "Route not found",
+// ─── Serve Client in Production ──────────────────────────────────────────────
+const clientDistPath = path.resolve(__dirname, "../../client/dist");
+if (config.isProd && fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+  app.get("*", (_req, res) => {
+    res.sendFile(path.join(clientDistPath, "index.html"));
   });
-});
+  logger.info(`Serving client from ${clientDistPath}`);
+} else {
+  // ─── 404 Handler (dev mode or no client build) ────────────────────────────
+  app.use((_req, res) => {
+    res.status(404).json({
+      success: false,
+      error: "Route not found",
+    });
+  });
+}
 
 // ─── Error Handler ───────────────────────────────────────────────────────────
 app.use(errorHandler);

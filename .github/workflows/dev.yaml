@@ -2,74 +2,33 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, development ]
+    branches: [main, development]
   pull_request:
-    branches: [ main, development ]
+    branches: [main, development]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Use Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-    - name: Install dependencies
-      run: npm ci
-    - name: Build application
-      run: npm run build
+      - uses: actions/checkout@v4
 
-  deploy:
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'development')
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
-    
-    - name: Install sshpass
-      run: sudo apt-get install sshpass
-    
-    - name: Deploy to Ubuntu server
-      env:
-        BRANCH: ${{ github.ref }}
-        SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
-      run: |
-        if [ "$BRANCH" = "refs/heads/main" ]; then
-          APP_PATH="/var/www/video-processing-server"
-          SERVICE_NAME="video-processing-server"
-          AWS_SECRET_NAME="${{ secrets.MAIN_AWS_SECRET_NAME }}"
-        elif [ "$BRANCH" = "refs/heads/development" ]; then
-          APP_PATH="/var/www/video-processing-server-dev/video-processing-server"
-          SERVICE_NAME="video-processing-server-dev"
-          AWS_SECRET_NAME="${{ secrets.DEV_AWS_SECRET_NAME }}"
-        else
-          exit 1
-        fi
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
 
-        sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no ${{ secrets.USERNAME }}@${{ secrets.HOST }} << EOF
-          cd $APP_PATH
-          sudo git config --system --add safe.directory $APP_PATH
-          git fetch origin
-          git reset --hard origin/${BRANCH#refs/heads/}
-          git clean -fd
-          npm install
-          export AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID"
-          export AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY"
-          export AWS_DEFAULT_REGION="$AWS_DEFAULT_REGION"
-          aws secretsmanager get-secret-value --secret-id $AWS_SECRET_NAME --query SecretString --output text > .env
-          chmod 600 .env
-          npm run build
-          sudo systemctl restart $SERVICE_NAME.service
-          unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION
-        EOF
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build server
+        run: npm run build:server
+
+      - name: Build client
+        run: npm run build:client
+
+      - name: Verify server build
+        run: ls -la server/dist/index.js
+
+      - name: Verify client build
+        run: ls -la client/dist/index.html
