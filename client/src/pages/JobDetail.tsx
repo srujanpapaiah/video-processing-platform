@@ -234,7 +234,9 @@ export default function JobDetail() {
             <p className="text-dark-100 font-medium">{job.originalFilename || job.inputFile}</p>
             {job.result?.duration != null && (
               <p className="text-dark-400 text-sm">
-                Duration: {formatDuration(job.result.duration)}
+                Processing time: {job.result.duration < 1000
+                  ? `${job.result.duration}ms`
+                  : formatDuration(job.result.duration / 1000)}
               </p>
             )}
           </div>
