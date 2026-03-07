@@ -82,7 +82,8 @@ export default function System() {
     try {
       setError(null);
       const data = await getStats();
-      setStats(data);
+      // getStats returns { queue, system } — we want the system stats
+      setStats(data?.system ?? data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load stats");
     } finally {

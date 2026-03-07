@@ -52,16 +52,22 @@ export default function JobDetail() {
     if (!id) return;
     try {
       setError(null);
-      const data = await getJob(id);
-      setJob(data);
-      if (data?.result?.outputFiles?.length) {
-        setOutputFiles(data.result.outputFiles);
-      } else if (data?.status === "completed") {
+      const jobData = await getJob(id);
+      setJob(jobData);
+
+      // Fetch output files
+      if (jobData?.status === "completed") {
         try {
           const filesData = await getJobFiles(id);
-          setOutputFiles(filesData?.files ?? filesData ?? []);
+          // filesData is an array of { filename, size, mimeType, downloadUrl }
+          setOutputFiles(Array.isArray(filesData) ? filesData : []);
         } catch {
-          setOutputFiles([]);
+          // Fall back to result.outputFiles if available
+          if (jobData?.result?.outputFiles?.length) {
+            setOutputFiles(jobData.result.outputFiles);
+          } else {
+            setOutputFiles([]);
+          }
         }
       } else {
         setOutputFiles([]);

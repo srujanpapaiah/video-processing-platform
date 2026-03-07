@@ -149,7 +149,7 @@ export default function Upload() {
         selectedOperation,
         options
       );
-      const jobId = res?.data?.jobId ?? res?.jobId ?? res?.id;
+      const jobId = res?.jobId ?? res?.id;
       navigate(`/jobs/${jobId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create job");

@@ -1,6 +1,6 @@
 const API_BASE = "/api/v1";
 
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
+async function request<T = any>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${url}`, {
     ...options,
     headers: {
@@ -9,13 +9,13 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
     },
   });
 
-  const data = await res.json();
+  const json = await res.json();
 
   if (!res.ok) {
-    throw new Error(data.error || `Request failed with status ${res.status}`);
+    throw new Error(json.error || `Request failed with status ${res.status}`);
   }
 
-  return data;
+  return json;
 }
 
 // ─── Jobs ────────────────────────────────────────────────────────────────────
@@ -23,7 +23,8 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 export async function uploadFile(file: File): Promise<any> {
   const formData = new FormData();
   formData.append("file", file);
-  return request("/jobs/upload", { method: "POST", body: formData });
+  const res = await request("/jobs/upload", { method: "POST", body: formData });
+  return res.data;
 }
 
 export async function createJob(
@@ -35,7 +36,8 @@ export async function createJob(
   formData.append("file", file);
   formData.append("operation", operation);
   formData.append("options", JSON.stringify(options));
-  return request("/jobs", { method: "POST", body: formData });
+  const res = await request("/jobs", { method: "POST", body: formData });
+  return res.data;
 }
 
 export async function createJobFromUpload(
@@ -44,10 +46,11 @@ export async function createJobFromUpload(
   operation: string,
   options: Record<string, unknown>
 ): Promise<any> {
-  return request("/jobs/from-upload", {
+  const res = await request("/jobs/from-upload", {
     method: "POST",
     body: JSON.stringify({ filename, originalFilename, operation, options }),
   });
+  return res.data;
 }
 
 export async function getJobs(params?: {
@@ -55,7 +58,7 @@ export async function getJobs(params?: {
   limit?: number;
   status?: string;
   operation?: string;
-}): Promise<any> {
+}): Promise<{ jobs: any[]; total: number; page: number; limit: number; totalPages: number }> {
   const searchParams = new URLSearchParams();
   if (params?.page) searchParams.set("page", String(params.page));
   if (params?.limit) searchParams.set("limit", String(params.limit));
@@ -63,15 +66,24 @@ export async function getJobs(params?: {
   if (params?.operation) searchParams.set("operation", params.operation);
 
   const qs = searchParams.toString();
-  return request(`/jobs${qs ? `?${qs}` : ""}`);
+  const res = await request(`/jobs${qs ? `?${qs}` : ""}`);
+  return {
+    jobs: res.data || [],
+    total: res.pagination?.total || 0,
+    page: res.pagination?.page || 1,
+    limit: res.pagination?.limit || 20,
+    totalPages: res.pagination?.totalPages || 1,
+  };
 }
 
 export async function getJob(id: string): Promise<any> {
-  return request(`/jobs/${id}`);
+  const res = await request(`/jobs/${id}`);
+  return res.data;
 }
 
 export async function probeJob(id: string): Promise<any> {
-  return request(`/jobs/${id}/probe`);
+  const res = await request(`/jobs/${id}/probe`);
+  return res.data;
 }
 
 export async function retryJob(id: string): Promise<any> {
@@ -88,8 +100,9 @@ export async function deleteJob(id: string): Promise<any> {
 
 // ─── Files ───────────────────────────────────────────────────────────────────
 
-export async function getJobFiles(jobId: string): Promise<any> {
-  return request(`/files/${jobId}`);
+export async function getJobFiles(jobId: string): Promise<any[]> {
+  const res = await request(`/files/${jobId}`);
+  return res.data || [];
 }
 
 export function getFileDownloadUrl(jobId: string, filename: string): string {
@@ -103,9 +116,11 @@ export function getUploadStreamUrl(filename: string): string {
 // ─── Health & Stats ──────────────────────────────────────────────────────────
 
 export async function getHealth(): Promise<any> {
-  return request("/health");
+  const res = await request("/health");
+  return res.data;
 }
 
-export async function getStats(): Promise<any> {
-  return request("/health/stats");
+export async function getStats(): Promise<{ queue: any; system: any }> {
+  const res = await request("/health/stats");
+  return res.data;
 }

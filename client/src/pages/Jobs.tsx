@@ -59,9 +59,9 @@ export default function Jobs() {
         status: statusFilter === "all" ? undefined : statusFilter,
         operation: operationFilter === "all" ? undefined : operationFilter,
       });
-      setJobs(res.data || []);
-      setTotalPages(res.pagination?.totalPages ?? 1);
-      setTotal(res.pagination?.total ?? 0);
+      setJobs(res.jobs || []);
+      setTotalPages(res.totalPages ?? 1);
+      setTotal(res.total ?? 0);
     } catch (err) {
       console.error("Failed to fetch jobs:", err);
       setJobs([]);
